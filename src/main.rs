@@ -1,44 +1,32 @@
+use clap::Parser;
 use colored::*;
-use std::{
-    env,
-    fs::{self, read_dir},
-    path::Path,
-};
+use std::path::Path;
+use walkdir::WalkDir;
 
-#[cfg(unix)]
-use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
+fn get_mode(metadata: &std::fs::Metadata) -> u32 {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        metadata.permissions().mode()
+    }
 
-#[cfg(unix)]
-fn get_mode(metadata: &fs::Metadata) -> u32 {
-    metadata.permissions().mode()
-}
-
-#[cfg(not(unix))]
-fn get_mode(_: &fs::Metadata) -> u32 {
-    0o666
-}
-
-#[cfg(unix)]
-fn get_file_size(metadata: &fs::Metadata) -> u64 {
-    metadata.size()
-}
-
-#[cfg(not(unix))]
-fn get_file_size(metadata: &fs::Metadata) -> u64 {
-    metadata.len()
+    #[cfg(not(unix))]
+    {
+        0o666
+    }
 }
 
 fn get_directory_size(path: &Path) -> u64 {
     let mut total_size = 0;
 
-    if let Ok(entries) = fs::read_dir(path) {
+    if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
             let path = entry.path();
             if let Ok(metadata) = entry.metadata() {
                 if metadata.is_dir() {
                     total_size += get_directory_size(&path);
                 } else {
-                    total_size += get_file_size(&metadata);
+                    total_size += &metadata.len();
                 }
             }
         }
@@ -47,25 +35,14 @@ fn get_directory_size(path: &Path) -> u64 {
     total_size
 }
 
-#[cfg(unix)]
 fn classify_type(file_type: &std::fs::FileType, file_name: String) -> ColoredString {
     match file_type {
         _ if file_type.is_file() => file_name.white(),
         _ if file_type.is_dir() => file_name.bold().cyan(),
         _ if file_type.is_symlink() => file_name.green(),
-        _ if file_type.is_block_device() => file_name.yellow(),
-        _ if file_type.is_fifo() => file_name.bold().blue(),
-        _ if file_type.is_socket() => file_name.bold().magenta(),
-        _ => file_name.bold().red(),
-    }
-}
-
-#[cfg(not(unix))]
-fn classify_type(file_type: &std::fs::FileType, file_name: String) -> ColoredString {
-    match file_type {
-        _ if file_type.is_file() => file_name.white(),
-        _ if file_type.is_dir() => file_name.bold().cyan(),
-        _ if file_type.is_symlink() => file_name.green(),
+        // _ if file_type.is_block_device() => file_name.yellow(),
+        // _ if file_type.is_fifo() => file_name.bold().blue(),
+        // _ if file_type.is_socket() => file_name.bold().magenta(),
         _ => file_name.bold().red(),
     }
 }
@@ -97,31 +74,25 @@ fn format_size(bytes: u64) -> String {
     format!("{:.1} {}", size, units[unit_index])
 }
 
-fn parse_args() -> (bool, String) {
-    let mut recursive = false;
-    let mut path = ".".to_string();
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(default_value = ".")]
+    path: String,
 
-    for arg in env::args().skip(1) {
-        if arg == "-r" || arg == "--recursive" {
-            recursive = true;
-        } else {
-            path = arg;
-        }
-    }
-
-    (recursive, path)
+    #[arg(short, long/*, about = "iterate through directories to show their sizes"*/)]
+    recursive: bool,
 }
 
 fn main() {
-    let (is_recursive, path) = parse_args();
-    let mut entries = read_dir(path)
-        .expect("Dir not found")
-        .map(|res| res.map(|e| e.path()))
-        .collect::<Result<Vec<_>, std::io::Error>>()
-        .expect("Failed to read dir");
-
-    entries.sort();
-    entries.sort_by_key(|p| !p.is_dir());
+    let args = Args::parse();
+    let is_recursive = args.recursive;
+    let path = args.path;
+    let mut entries = WalkDir::new(path)
+        .max_depth(1)
+        .sort_by_key(|i| !i.file_type().is_dir())
+        .into_iter()
+        .filter_map(|e| e.ok());
 
     println!(
         "{:<10} {:>8} {}",
@@ -130,20 +101,17 @@ fn main() {
         "name".yellow()
     );
     for entry in &mut entries {
-        let metadata = fs::metadata(&entry).unwrap_or_else(|_| {
-            eprintln!("Failed to read metadata for {:?}", entry);
-            std::process::exit(1);
-        });
+        let metadata = entry.metadata().unwrap();
 
-        let file_type = metadata.file_type();
-        let is_dir = metadata.is_dir();
-        let file_name = entry.file_name().unwrap().to_string_lossy().into_owned();
+        let file_type = entry.file_type();
+        let is_dir = file_type.is_dir();
+        let file_name = entry.file_name().to_str().unwrap().to_string();
         let size = if is_dir && is_recursive {
-            get_directory_size(entry.as_path())
+            get_directory_size(entry.path())
         } else if is_dir && !is_recursive {
             0
         } else {
-            get_file_size(&metadata)
+            metadata.len()
         };
         let mode = get_mode(&metadata);
 
