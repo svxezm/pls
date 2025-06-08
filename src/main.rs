@@ -77,7 +77,7 @@ struct Args {
     #[arg(default_value = ".")]
     path: String,
 
-    #[arg(short, long/*, about = "iterate through directories to show their sizes"*/)]
+    #[arg(short, long, help = "Iterate through directories to show their sizes")]
     recursive: bool,
 }
 
