@@ -17,5 +17,6 @@ A simple remake of the classic `ls` program, written in Rust.
 
 You can use a few arguments to use this program
 
-- `<target>` - specifies the target directory
-- `-r` - enable recursive size calculation for directories
+- `<target>` - specifies the target directory (defaults to current if not informed)
+- `-r`, `--recursive` - enable recursive size calculation for directories
+- `-h`, `--help` - prints a help list
