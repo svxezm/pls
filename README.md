@@ -11,7 +11,7 @@ A simple remake of the classic `ls` program, written in Rust.
 
 ### An alias example for Zsh
 
-`alias -- 'pls'='cd <project_path>/pls && ./target/release/pls'`
+`alias -- 'pls'='<project_path>/pls/target/release/pls'`
 
 ## Usage
 
