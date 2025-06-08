@@ -87,7 +87,7 @@ fn main() {
     let path = args.path;
     let mut entries = WalkDir::new(path)
         .max_depth(1)
-        .sort_by_key(|i| !i.file_type().is_dir())
+        .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()))
         .into_iter()
         .filter_map(|e| e.ok());
 
