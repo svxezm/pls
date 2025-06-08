@@ -37,12 +37,9 @@ fn get_directory_size(path: &Path) -> u64 {
 
 fn classify_type(file_type: &std::fs::FileType, file_name: String) -> ColoredString {
     match file_type {
-        _ if file_type.is_file() => file_name.white(),
+        _ if file_type.is_file() => file_name.truecolor(255, 224, 225),
         _ if file_type.is_dir() => file_name.bold().cyan(),
         _ if file_type.is_symlink() => file_name.green(),
-        // _ if file_type.is_block_device() => file_name.yellow(),
-        // _ if file_type.is_fifo() => file_name.bold().blue(),
-        // _ if file_type.is_socket() => file_name.bold().magenta(),
         _ => file_name.bold().red(),
     }
 }
