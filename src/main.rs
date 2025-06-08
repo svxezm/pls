@@ -95,7 +95,7 @@ fn main() {
         .filter_map(|e| e.ok());
 
     println!(
-        "{:<10} {:>8} {}",
+        "{:<12} {:>8}  {:<1}",
         "perm".yellow(),
         "size".yellow(),
         "name".yellow()
@@ -120,8 +120,8 @@ fn main() {
         let colored_file_name = classify_type(&file_type, file_name);
 
         println!(
-            "{:^10} {:>8} {}",
-            permissions, pretty_size, colored_file_name
+            "{:<12} {:>8}  {:<1}",
+            permissions, pretty_size, colored_file_name,
         );
     }
 }
