@@ -44,11 +44,15 @@ fn classify_type(file_type: &std::fs::FileType, file_name: String) -> ColoredStr
     }
 }
 
-fn to_rwx_string(mode: u32, is_dir: bool) -> String {
+fn permissions_to_string(mode: u32, is_dir: bool, is_symlink: bool) -> String {
     let mut permission_str = String::new();
     let perms = mode & 0o777;
 
-    permission_str.push(if is_dir { 'd' } else { '-' });
+    permission_str.push(match (is_dir, is_symlink) {
+        (true, false) => 'd',
+        (false, true) => 'l',
+        _ => '-',
+    });
     for i in (0..3).rev() {
         let bits = (perms >> (i * 3)) & 0b111;
         permission_str.push(if bits & 0b100 != 0 { 'r' } else { '-' });
@@ -102,6 +106,7 @@ fn main() {
 
         let file_type = entry.file_type();
         let is_dir = file_type.is_dir();
+        let is_symlink = metadata.is_symlink();
         let file_name = entry.file_name().to_str().unwrap().to_string();
         let size = if is_dir && is_recursive {
             get_directory_size(entry.path())
@@ -112,13 +117,13 @@ fn main() {
         };
         let mode = get_mode(&metadata);
 
-        let permissions = to_rwx_string(mode, is_dir);
+        let permissions = permissions_to_string(mode, is_dir, is_symlink);
         let pretty_size = format_size(size);
         let colored_file_name = classify_type(&file_type, file_name);
 
         println!(
             "{:<12} {:>8}  {:<1}",
-            permissions, pretty_size, colored_file_name,
+            permissions, pretty_size, colored_file_name
         );
     }
 }
