@@ -1,6 +1,6 @@
 use clap::Parser;
 use colored::*;
-use std::path::Path;
+use std::{fs, path::Path};
 use walkdir::WalkDir;
 
 fn get_mode(metadata: &std::fs::Metadata) -> u32 {
@@ -129,9 +129,16 @@ fn main() {
         let pretty_size = format_size(size);
         let colored_file_name = classify_type(&file_type, file_name);
 
-        println!(
+        print!(
             "{:<12} {:>8}  {:<1}",
             permissions, pretty_size, colored_file_name
         );
+        if is_symlink {
+            if let Ok(target) = fs::read_link(entry.path()) {
+                println!(" {} {}", "->".bold().red(), target.display());
+            }
+        } else {
+            println!("");
+        }
     }
 }
