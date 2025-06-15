@@ -83,14 +83,19 @@ struct Args {
 
     #[arg(short, long, help = "Iterate through directories to show their sizes")]
     recursive: bool,
+
+    #[arg(short, long, help = "Follow system links")]
+    symlinks: bool,
 }
 
 fn main() {
     let args = Args::parse();
     let is_recursive = args.recursive;
     let path = args.path;
+    let can_follow_symlinks = args.symlinks;
     let mut entries = WalkDir::new(path)
         .max_depth(1)
+        .follow_links(can_follow_symlinks)
         .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()))
         .into_iter()
         .filter_map(|e| e.ok());
@@ -102,18 +107,21 @@ fn main() {
         "name".yellow()
     );
     for entry in &mut entries {
-        let metadata = entry.metadata().unwrap();
-
-        let file_type = entry.file_type();
-        let is_dir = file_type.is_dir();
-        let is_symlink = metadata.is_symlink();
-        let file_name = entry.file_name().to_str().unwrap().to_string();
-        let size = if is_dir && is_recursive {
-            get_directory_size(entry.path())
-        } else if is_dir && !is_recursive {
-            0
+        let link_stat = entry.path().symlink_metadata().unwrap();
+        let metadata = if can_follow_symlinks {
+            entry.metadata().unwrap()
         } else {
-            metadata.len()
+            link_stat.clone()
+        };
+
+        let file_type = link_stat.file_type();
+        let is_dir = file_type.is_dir();
+        let is_symlink = file_type.is_symlink();
+        let file_name = entry.file_name().to_str().unwrap().to_string();
+        let size = match (is_dir, is_recursive) {
+            (true, true) => get_directory_size(&entry.path()),
+            (true, false) => 0,
+            _ => metadata.len(),
         };
         let mode = get_mode(&metadata);
 
