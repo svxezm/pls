@@ -1,27 +1,31 @@
 use clap::Parser;
 use colored::*;
+use rayon::prelude::*;
 use std::{
     fs::{read_dir, FileType},
     path::Path,
 };
 
 pub fn get_directory_size(path: &Path) -> u64 {
-    let mut total_size = 0;
-
     if let Ok(entries) = read_dir(path) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if let Ok(metadata) = entry.metadata() {
-                if metadata.is_dir() {
-                    total_size += get_directory_size(&path);
-                } else {
-                    total_size += &metadata.len();
+        entries
+            .flatten()
+            .par_bridge()
+            .map(|entry| {
+                let path = entry.path();
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_dir() {
+                        return get_directory_size(&path);
+                    } else {
+                        return metadata.len();
+                    }
                 }
-            }
-        }
+                0
+            })
+            .sum()
+    } else {
+        0
     }
-
-    total_size
 }
 
 pub fn colorize_type(file_type: &FileType, file_name: String) -> ColoredString {

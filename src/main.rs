@@ -3,6 +3,7 @@ mod pls;
 use clap::Parser;
 use colored::*;
 use pls::*;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{fs, os::unix::fs::MetadataExt};
 use walkdir::WalkDir;
 
@@ -11,7 +12,7 @@ fn main() {
     let is_recursive = args.recursive;
     let path = args.path;
     let can_follow_symlinks = args.symlinks;
-    let mut entries = WalkDir::new(path)
+    let entries = WalkDir::new(path)
         .max_depth(1)
         .follow_links(can_follow_symlinks)
         .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()))
@@ -24,7 +25,8 @@ fn main() {
         "size".yellow(),
         "name".yellow()
     );
-    for entry in &mut entries {
+
+    entries.par_bridge().for_each(|entry| {
         let link_stat = entry.path().symlink_metadata().unwrap();
         let metadata = if can_follow_symlinks {
             entry.metadata().unwrap()
@@ -56,5 +58,5 @@ fn main() {
         } else {
             println!("");
         }
-    }
+    });
 }
