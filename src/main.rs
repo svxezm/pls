@@ -73,7 +73,7 @@ fn main() {
         .collect();
 
     results.sort_by_key(|e| (!e.is_dir, e.file_name_str.clone()));
-    results.into_iter().for_each(|entry| {
+    results.into_iter().skip(1).for_each(|entry| {
         print!(
             "{:<12} {:>8}  {:<1}",
             entry.permissions, entry.size, entry.file_name
