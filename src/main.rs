@@ -3,7 +3,7 @@ mod pls;
 use clap::Parser;
 use colored::*;
 use pls::*;
-use std::fs;
+use std::{fs, os::unix::fs::MetadataExt};
 use walkdir::WalkDir;
 
 fn main() {
@@ -41,9 +41,7 @@ fn main() {
             (true, false) => 0,
             _ => metadata.len(),
         };
-        let mode = get_permission_mode(&metadata);
-
-        let permissions = permissions_to_string(mode, is_dir, is_symlink);
+        let permissions = permissions_to_string(metadata.mode(), is_dir, is_symlink);
         let pretty_size = format_size(size);
         let colored_file_name = colorize_type(&file_type, file_name);
 

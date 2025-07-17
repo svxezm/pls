@@ -1,22 +1,9 @@
 use clap::Parser;
 use colored::*;
 use std::{
-    fs::{read_dir, FileType, Metadata},
+    fs::{read_dir, FileType},
     path::Path,
 };
-
-pub fn get_permission_mode(metadata: &Metadata) -> u32 {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        metadata.permissions().mode()
-    }
-
-    #[cfg(not(unix))]
-    {
-        0o666
-    }
-}
 
 pub fn get_directory_size(path: &Path) -> u64 {
     let mut total_size = 0;
