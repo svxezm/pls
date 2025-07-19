@@ -62,7 +62,7 @@ pub fn format_size(bytes: u64) -> String {
     let mut unit_index = 0;
 
     while size >= 1024.0 && unit_index < units.len() - 1 {
-        size = size / 1024.0;
+        size /= 1024.0;
         unit_index += 1;
     }
 
