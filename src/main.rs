@@ -4,7 +4,7 @@ use clap::Parser;
 use colored::*;
 use pls::*;
 use rayon::iter::{ParallelBridge, ParallelIterator};
-use std::{fs, os::unix::fs::MetadataExt};
+use std::{fs, os::unix::fs::MetadataExt, path::Path};
 use walkdir::WalkDir;
 
 struct Entry {
@@ -28,7 +28,8 @@ fn main() {
         .follow_links(can_follow_symlinks)
         .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()))
         .into_iter()
-        .filter_map(|e| e.ok());
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path() != Path::new(&path));
 
     let mut results: Vec<Entry> = entries
         .par_bridge()
