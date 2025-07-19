@@ -10,7 +10,8 @@ use walkdir::WalkDir;
 struct Entry {
     permissions: String,
     file_name: ColoredString,
-    size: String,
+    size: u64,
+    size_str: String,
     is_dir: bool,
     is_symlink: bool,
     file_name_str: String,
@@ -22,20 +23,14 @@ fn main() {
     let is_recursive = args.recursive;
     let path = args.path;
     let can_follow_symlinks = args.symlinks;
-    let entries = WalkDir::new(path)
+    let entries = WalkDir::new(&path)
         .max_depth(1)
         .follow_links(can_follow_symlinks)
-        .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()));
-    let entries_iter = entries.into_iter().filter_map(|e| e.ok());
+        .sort_by_key(|i| (!i.file_type().is_dir(), i.file_name().to_os_string()))
+        .into_iter()
+        .filter_map(|e| e.ok());
 
-    println!(
-        "{:<12} {:>8}  {:<1}",
-        "perm".yellow(),
-        "size".yellow(),
-        "name".yellow()
-    );
-
-    let mut results: Vec<Entry> = entries_iter
+    let mut results: Vec<Entry> = entries
         .par_bridge()
         .map(|entry| {
             let link_stat = entry.path().symlink_metadata().unwrap();
@@ -63,7 +58,8 @@ fn main() {
             Entry {
                 permissions,
                 file_name: colored_file_name,
-                size: pretty_size,
+                size,
+                size_str: pretty_size,
                 is_dir,
                 is_symlink,
                 file_name_str: file_name,
@@ -73,10 +69,22 @@ fn main() {
         .collect();
 
     results.sort_by_key(|e| (!e.is_dir, e.file_name_str.clone()));
-    results.into_iter().skip(1).for_each(|entry| {
+
+    let target_directory_size = results.iter().map(|e| e.size.clone()).sum();
+    let formated_directory_size = format_size(target_directory_size);
+    println!("{}: {}\n", "Total size".magenta(), formated_directory_size);
+
+    println!(
+        "{:<12} {:>8}  {:<1}",
+        "perm".yellow(),
+        "size".yellow(),
+        "name".yellow()
+    );
+
+    results.into_iter().for_each(|entry| {
         print!(
             "{:<12} {:>8}  {:<1}",
-            entry.permissions, entry.size, entry.file_name
+            entry.permissions, entry.size_str, entry.file_name
         );
         if entry.is_symlink {
             if let Ok(target) = fs::read_link(entry.path) {
