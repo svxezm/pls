@@ -3,8 +3,10 @@ use colored::*;
 use rayon::prelude::*;
 use std::{
     fs::{read_dir, FileType},
+    os::unix::fs::MetadataExt,
     path::Path,
 };
+use walkdir::DirEntry;
 
 pub fn get_directory_size(path: &Path) -> u64 {
     if let Ok(entries) = read_dir(path) {
@@ -67,6 +69,56 @@ pub fn format_size(bytes: u64) -> String {
     }
 
     format!("{:.1} {}", size, units[unit_index])
+}
+
+pub fn get_results(entries: Vec<DirEntry>, args: Args) -> Vec<Entry> {
+    entries
+        .into_iter()
+        .par_bridge()
+        .map(|entry| {
+            let link_stat = entry.path().symlink_metadata().unwrap();
+            let metadata = if args.symlinks {
+                entry.metadata().unwrap()
+            } else {
+                link_stat.clone()
+            };
+
+            let file_type = link_stat.file_type();
+            let is_dir = file_type.is_dir();
+            let is_symlink = file_type.is_symlink();
+            let file_name = entry.file_name().to_str().unwrap().to_string();
+            let size = match (is_dir, args.recursive) {
+                (true, true) => get_directory_size(&entry.path()),
+                (true, false) => 0,
+                _ => metadata.len(),
+            };
+            let path = entry.path();
+
+            let permissions = permissions_to_string(metadata.mode(), is_dir, is_symlink);
+            let pretty_size = format_size(size);
+            let colored_file_name = colorize_type(&file_type, file_name.clone());
+
+            Entry {
+                permissions,
+                file_name: colored_file_name,
+                size,
+                size_str: pretty_size,
+                is_symlink,
+                file_name_str: file_name,
+                path: path.to_str().unwrap().to_string(),
+            }
+        })
+        .collect()
+}
+
+pub struct Entry {
+    pub permissions: String,
+    pub file_name: ColoredString,
+    pub size: u64,
+    pub size_str: String,
+    pub is_symlink: bool,
+    pub file_name_str: String,
+    pub path: String,
 }
 
 #[derive(Parser, Debug)]
