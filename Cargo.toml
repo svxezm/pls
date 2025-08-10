@@ -8,3 +8,4 @@ clap = { version = "4.5.39", features = ["derive"] }
 colored = "3.0.0"
 rayon = "1.10.0"
 walkdir = "2.5.0"
+winapi = { version = "0.3.9", features = ["winnt"] }

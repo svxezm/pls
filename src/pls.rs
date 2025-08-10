@@ -1,9 +1,9 @@
+use crate::permissions;
 use clap::Parser;
 use colored::*;
 use rayon::prelude::*;
 use std::{
     fs::{read_dir, FileType},
-    os::unix::fs::MetadataExt,
     path::Path,
 };
 use walkdir::DirEntry;
@@ -37,25 +37,6 @@ pub fn colorize_type(file_type: &FileType, file_name: String) -> ColoredString {
         _ if file_type.is_symlink() => file_name.green(),
         _ => file_name.bold().red(),
     }
-}
-
-pub fn permissions_to_string(mode: u32, is_dir: bool, is_symlink: bool) -> String {
-    let mut permission_str = String::new();
-    let perms = mode & 0o777;
-
-    permission_str.push(match (is_dir, is_symlink) {
-        (true, false) => 'd',
-        (false, true) => 'l',
-        _ => '-',
-    });
-    for i in (0..3).rev() {
-        let bits = (perms >> (i * 3)) & 0b111;
-        permission_str.push(if bits & 0b100 != 0 { 'r' } else { '-' });
-        permission_str.push(if bits & 0b010 != 0 { 'w' } else { '-' });
-        permission_str.push(if bits & 0b001 != 0 { 'x' } else { '-' });
-    }
-
-    permission_str
 }
 
 pub fn format_size(bytes: u64) -> String {
@@ -94,7 +75,7 @@ pub fn get_results(entries: Vec<DirEntry>, args: Args) -> Vec<Entry> {
             };
             let path = entry.path();
 
-            let permissions = permissions_to_string(metadata.mode(), is_dir, is_symlink);
+            let permissions = permissions::to_string(metadata, is_dir, is_symlink);
             let pretty_size = format_size(size);
             let colored_file_name = colorize_type(&file_type, file_name.clone());
 

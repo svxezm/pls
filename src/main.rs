@@ -1,3 +1,4 @@
+mod permissions;
 mod pls;
 
 use clap::Parser;
