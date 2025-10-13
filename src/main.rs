@@ -28,7 +28,7 @@ fn main() {
     println!("{}: {}\n", "Total size".magenta(), formated_directory_size);
 
     println!(
-        "{:<12} {:>8}  {:<1}",
+        "{:<12} {:>10}  {:<}",
         "perm".yellow(),
         "size".yellow(),
         "name".yellow()
@@ -36,7 +36,7 @@ fn main() {
 
     results.into_iter().for_each(|entry| {
         print!(
-            "{:<12} {:>8}  {:<1}",
+            "{:<12} {:>10}  {:<}",
             entry.permissions, entry.size_str, entry.file_name
         );
         if entry.is_symlink {
