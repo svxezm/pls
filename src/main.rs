@@ -11,7 +11,7 @@ fn main() {
     let args = Args::parse();
     let path = &args.path;
     let can_follow_symlinks = args.symlinks;
-    let entries = WalkDir::new(&path)
+    let entries = WalkDir::new(path)
         .max_depth(1)
         .follow_links(can_follow_symlinks)
         .into_iter()
@@ -23,16 +23,12 @@ fn main() {
 
     results.sort_by_key(|e| e.file_name_str.clone());
 
-    let target_directory_size = results.iter().map(|e| e.size.clone()).sum();
+    let target_directory_size = results.iter().map(|e| e.size).sum();
     let formated_directory_size = format_size(target_directory_size);
     println!("{}: {}\n", "Total size".magenta(), formated_directory_size);
 
-    println!(
-        "{:<12} {:>10}  {:<}",
-        "perm".yellow(),
-        "size".yellow(),
-        "name".yellow()
-    );
+    let headers = format!("{:12} {:>10}  {:<}", "perm", "size", "name");
+    println!("{}", headers.yellow());
 
     results.into_iter().for_each(|entry| {
         print!(
@@ -44,7 +40,7 @@ fn main() {
                 println!(" {} {}", "->".bold().red(), target.display());
             }
         } else {
-            println!("");
+            println!();
         }
     });
 }
