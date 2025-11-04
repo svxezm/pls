@@ -23,6 +23,11 @@ fn main() {
 
     results.sort_by_key(|e| e.file_name_str.clone());
 
+    if results.len() == 0 {
+        println!("<empty directory>");
+        return;
+    }
+
     let target_directory_size = results.iter().map(|e| e.size).sum();
     let formated_directory_size = format_size(target_directory_size);
     println!("{}: {}\n", "Total size".magenta(), formated_directory_size);
