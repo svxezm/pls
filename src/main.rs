@@ -10,6 +10,12 @@ use walkdir::{DirEntry, WalkDir};
 fn main() {
     let args = Args::parse();
     let path = &args.path;
+
+    if !Path::new(path).exists() {
+        println!("!! path does not exist !!");
+        return;
+    }
+
     let can_follow_symlinks = args.symlinks;
     let entries = WalkDir::new(path)
         .max_depth(1)
@@ -23,7 +29,7 @@ fn main() {
 
     results.sort_by_key(|e| e.file_name_str.clone());
 
-    if results.len() == 0 {
+    if results.is_empty() {
         println!("<empty directory>");
         return;
     }
